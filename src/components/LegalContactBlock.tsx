@@ -1,33 +1,44 @@
 import type { ReactNode } from 'react';
-import { LEGAL, buildContactMailto } from '../lib/legalConfig';
+import { LEGAL, isContactFormConfigured } from '../lib/legalConfig';
 
 interface LegalContactBlockProps {
   subject: string;
   children?: ReactNode;
 }
 
+function ContactFormLink({ label = LEGAL.contactFormLabel }: { label?: string }) {
+  if (!isContactFormConfigured()) {
+    return <span className="legal-contact__pending">準備中</span>;
+  }
+
+  return (
+    <a
+      className="legal-contact__link"
+      href={LEGAL.contactFormUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {label}
+    </a>
+  );
+}
+
 export function LegalContactBlock({ subject, children }: LegalContactBlockProps) {
-  const mailto = buildContactMailto(subject);
+  const docLabel = subject.includes('プライバシー') ? 'ポリシー' : '規約';
 
   return (
     <div className="legal-contact">
       {children ?? (
         <p>
-          本{subject.includes('プライバシー') ? 'ポリシー' : '規約'}に関するお問い合わせは、
-          {LEGAL.operatorName}までご連絡ください。
+          本{docLabel}に関するお問い合わせは、下記の{LEGAL.contactFormLabel}より{LEGAL.operatorName}へご連絡ください。
         </p>
       )}
-      {mailto ? (
+      {isContactFormConfigured() ? (
         <p>
-          メール:{' '}
-          <a className="legal-contact__link" href={mailto}>
-            {LEGAL.contactEmail}
-          </a>
+          <ContactFormLink label={`${LEGAL.contactFormLabel}を開く`} />
         </p>
       ) : (
-        <p className="legal-contact__pending">
-          お問い合わせメールアドレスは準備中です。公開前に設定されます。
-        </p>
+        <p className="legal-contact__pending">お問い合わせフォームは準備中です。</p>
       )}
       <p className="legal-contact__meta">
         運営者: {LEGAL.operatorName}
@@ -65,13 +76,7 @@ export function LegalOperatorSummary() {
         <div>
           <dt>お問い合わせ</dt>
           <dd>
-            {LEGAL.contactEmail ? (
-              <a className="legal-contact__link" href={buildContactMailto('Swipe VS お問い合わせ') ?? undefined}>
-                {LEGAL.contactEmail}
-              </a>
-            ) : (
-              '準備中'
-            )}
+            <ContactFormLink />
           </dd>
         </div>
       </dl>

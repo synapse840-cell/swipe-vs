@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { MyPageNotification } from '../lib/myPageNotifications';
 import { MY_PAGE_NOTIFICATION_LIMIT } from '../lib/myPageNotifications';
+import { navigateTo } from '../lib/legalRoutes';
 import type { Topic, VoteSide } from '../types';
 
 export interface VotedTopicItem {
@@ -304,6 +305,16 @@ export function MyPageDrawer({
             )}
           </div>
         </CollapsibleSection>
+
+        <footer className="my-drawer__legal">
+          <button type="button" className="my-drawer__legal-link" onClick={() => navigateTo('/terms')}>
+            利用規約
+          </button>
+          <span aria-hidden="true">·</span>
+          <button type="button" className="my-drawer__legal-link" onClick={() => navigateTo('/privacy')}>
+            プライバシーポリシー
+          </button>
+        </footer>
       </div>
     </>
   );

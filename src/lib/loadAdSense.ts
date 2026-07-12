@@ -17,10 +17,17 @@ function pushAdUnit() {
   }
 }
 
+function findAdSenseScript(): HTMLScriptElement | null {
+  return (
+    (document.getElementById(SCRIPT_ID) as HTMLScriptElement | null) ??
+    document.querySelector('script[src*="adsbygoogle.js"]')
+  );
+}
+
 function ensureAdSenseScript(clientId: string, onReady: () => void) {
-  const existing = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
+  const existing = findAdSenseScript();
   if (existing) {
-    if (existing.dataset.loaded === 'true') {
+    if (existing.dataset.loaded === 'true' || window.adsbygoogle) {
       onReady();
       return;
     }

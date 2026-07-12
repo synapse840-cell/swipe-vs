@@ -1913,13 +1913,23 @@ body {
 }
 
 .legal-page {
-  min-height: 100%;
+  position: fixed;
+  inset: 0;
+  left: 50%;
+  width: 100%;
   max-width: 480px;
-  margin: 0 auto;
+  transform: translateX(-50%);
+  margin: 0;
   padding: calc(16px + var(--safe-top)) 16px calc(24px + var(--safe-bottom));
+  overflow-x: hidden;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  user-select: text;
   background: var(--bg-primary);
   color: var(--text-primary);
+  z-index: 200;
 }
 
 .legal-page__header {
@@ -1934,6 +1944,7 @@ body {
   cursor: pointer;
   padding: 0;
   margin-bottom: 12px;
+  touch-action: manipulation;
 }
 
 .legal-page__title {
@@ -2020,6 +2031,7 @@ body {
   color: var(--color-b);
   text-decoration: underline;
   text-underline-offset: 2px;
+  touch-action: manipulation;
 }
 
 .legal-contact__pending {
@@ -2058,6 +2070,7 @@ body {
   padding: 0;
   text-decoration: underline;
   text-underline-offset: 2px;
+  touch-action: manipulation;
 }
 
 .my-drawer__legal {

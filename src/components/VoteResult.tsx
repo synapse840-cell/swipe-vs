@@ -1,4 +1,6 @@
+import { motion, type PanInfo } from 'framer-motion';
 import type { VoteSide } from '../types';
+import { checkVerticalSkip } from '../utils/swipeGesture';
 
 interface VoteResultProps {
   votesA: number;
@@ -6,9 +8,17 @@ interface VoteResultProps {
   userVote: VoteSide;
   visible: boolean;
   onClose: () => void;
+  onNext: () => void;
 }
 
-export function VoteResult({ votesA, votesB, userVote, visible, onClose }: VoteResultProps) {
+export function VoteResult({
+  votesA,
+  votesB,
+  userVote,
+  visible,
+  onClose,
+  onNext,
+}: VoteResultProps) {
   const total = votesA + votesB;
   const pctA = total === 0 ? 50 : Math.round((votesA / total) * 100);
   const pctB = 100 - pctA;
@@ -18,10 +28,21 @@ export function VoteResult({ votesA, votesB, userVote, visible, onClose }: VoteR
   const verdict =
     userPct > otherPct ? '多数派' : userPct < otherPct ? '少数派' : '同率派';
 
+  async function handleDragEnd(_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) {
+    if (checkVerticalSkip(info.offset)) {
+      onNext();
+    }
+  }
+
   return (
-    <div
+    <motion.div
       className={`vote-result ${visible ? 'vote-result--visible' : ''}`}
-      onClick={onClose}
+      drag="y"
+      dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
+      dragElastic={0.06}
+      dragMomentum={false}
+      dragSnapToOrigin
+      onDragEnd={handleDragEnd}
       role="dialog"
       aria-modal="true"
       aria-label="投票結果"
@@ -77,7 +98,7 @@ export function VoteResult({ votesA, votesB, userVote, visible, onClose }: VoteR
         </p>
       </div>
 
-      <p className="vote-result__hint">背景タップで質問に戻る</p>
-    </div>
+      <p className="vote-result__hint">↑ スワイプで次へ</p>
+    </motion.div>
   );
 }

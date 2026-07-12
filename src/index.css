@@ -557,7 +557,6 @@ body {
   pointer-events: none;
   gap: 20px;
   padding: 0;
-  cursor: pointer;
 }
 
 .vote-result--visible {
@@ -579,6 +578,7 @@ body {
     0 0 0 1px rgba(255, 255, 255, 0.04) inset;
   animation: card-rise 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
   cursor: default;
+  pointer-events: auto;
 }
 
 /* 右端のお気に入りボタンと重ならないよう、×はカード内で左に寄せる */
@@ -1821,6 +1821,25 @@ body {
   background: linear-gradient(135deg, #1a1a2e, #2a1a3e);
   border-radius: var(--radius);
   border: 1px solid var(--border);
+}
+
+.ad-overlay__slot {
+  min-height: 250px;
+  width: 100%;
+  max-width: 336px;
+  margin: 32px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+}
+
+.ad-overlay__slot iframe,
+.ad-overlay__slot img {
+  max-width: 100%;
 }
 
 .ad-overlay__mock p {

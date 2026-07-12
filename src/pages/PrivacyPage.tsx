@@ -39,6 +39,7 @@ export function PrivacyPage() {
           <li>不正利用の防止、セキュリティ確保</li>
           <li>障害対応、品質改善、利用状況の分析</li>
           <li>お問い合わせ、通報、削除依頼への対応</li>
+          <li>広告の配信および広告効果の測定</li>
           <li>法令に基づく対応</li>
         </ul>
         <p>上記の利用目的の範囲を超えて利用することはありません。</p>
@@ -57,6 +58,10 @@ export function PrivacyPage() {
           <li>
             <strong>Unsplash 等</strong>（デフォルト画像の配信）
           </li>
+          <li>
+            <strong>Google AdSense</strong>（広告配信）
+            — 広告の表示・効果測定のため、Cookie 等が利用される場合があります
+          </li>
         </ul>
         <p>
           これらのサービス提供者において、それぞれのプライバシーポリシーに基づき情報が処理される場合があります。
@@ -73,7 +78,20 @@ export function PrivacyPage() {
           ブラウザ設定により Cookie やローカルストレージを無効化できますが、
           ログイン維持や履歴表示など、一部機能が利用できなくなる場合があります。
         </p>
-        <p>現時点で、行動ターゲティング広告のための第三者 Cookie は使用していません。</p>
+        <p>
+          Google AdSense 等の広告配信事業者は、広告の配信・効果測定のために Cookie 等を利用する場合があります。
+          パーソナライズド広告の無効化は
+          {' '}
+          <a
+            className="legal-contact__link"
+            href="https://www.google.com/settings/ads"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Google 広告設定
+          </a>
+          から行えます。詳細は各事業者のプライバシーポリシーをご確認ください。
+        </p>
       </LegalSection>
 
       <LegalSection title="5. 第三者提供">

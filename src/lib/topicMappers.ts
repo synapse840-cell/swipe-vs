@@ -1,5 +1,6 @@
 import type { Database } from '../types/database';
 import type { Comment, Topic, TopicCategory } from '../types';
+import { normalizeTopicImageUrl } from './topicImage';
 
 type TopicRow = Database['public']['Tables']['topics']['Row'];
 type CommentRow = Database['public']['Tables']['comments']['Row'];
@@ -24,8 +25,8 @@ export function mapTopicRow(row: TopicRow, comments: Comment[]): Topic {
     id: row.id,
     title: row.title,
     category: row.category as TopicCategory,
-    optionA: { text: row.option_a_text, imageUrl: row.option_a_image_url },
-    optionB: { text: row.option_b_text, imageUrl: row.option_b_image_url },
+    optionA: { text: row.option_a_text, imageUrl: normalizeTopicImageUrl(row.option_a_image_url) },
+    optionB: { text: row.option_b_text, imageUrl: normalizeTopicImageUrl(row.option_b_image_url) },
     votesA: row.votes_a,
     votesB: row.votes_b,
     viewCount: row.view_count,

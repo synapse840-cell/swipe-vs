@@ -13,6 +13,7 @@ import {
   resolveHorizontalVote,
 } from '../utils/swipeGesture';
 import { VoteResult } from './VoteResult';
+import { TopicChoiceImage } from './TopicChoiceImage';
 
 interface SwipeCardProps {
   topic: Topic;
@@ -149,6 +150,9 @@ export function SwipeCard({
   const canDrag = isActive && !isAnimating && !isCommittingRef.current;
   const allowHorizontalVote = !voted && !showResult;
   const isReviewMode = Boolean(voted) && !showResult;
+  const enableVerticalNext = isReviewMode;
+  const enableGesture = canDrag && (allowHorizontalVote || enableVerticalNext);
+  const dragAxis = allowHorizontalVote ? true : 'y';
 
   return (
     <div
@@ -182,7 +186,7 @@ export function SwipeCard({
         <div className="swipe-card__choices-area">
           <div className="swipe-card__choices">
             <div className="swipe-card__choice swipe-card__choice--a">
-            <img src={topic.optionA.imageUrl} alt={topic.optionA.text} />
+            <TopicChoiceImage src={topic.optionA.imageUrl} alt={topic.optionA.text} />
             <div className="swipe-card__choice-label swipe-card__choice-label--a">
               <span className="swipe-card__choice-badge swipe-card__choice-badge--a">A</span>
               <p>{topic.optionA.text}</p>
@@ -198,7 +202,7 @@ export function SwipeCard({
           <div className="swipe-card__divider" />
 
           <div className="swipe-card__choice swipe-card__choice--b">
-            <img src={topic.optionB.imageUrl} alt={topic.optionB.text} />
+            <TopicChoiceImage src={topic.optionB.imageUrl} alt={topic.optionB.text} />
             <div className="swipe-card__choice-label swipe-card__choice-label--b">
               <span className="swipe-card__choice-badge swipe-card__choice-badge--b">B</span>
               <p>{topic.optionB.text}</p>
@@ -219,18 +223,6 @@ export function SwipeCard({
           {isReviewMode && (
             <p className="swipe-card__skip-hint">↑ スワイプで次へ</p>
           )}
-
-          {canDrag && !showResult && (
-            <motion.div
-              className="swipe-card__gesture-layer"
-              drag={canDrag ? (showResult || voted ? 'y' : true) : false}
-              dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-              dragElastic={0.06}
-              dragMomentum={false}
-              onDrag={handleDrag}
-              onDragEnd={handleDragEnd}
-            />
-          )}
         </div>
 
         {resultVisible && voted && (
@@ -240,6 +232,19 @@ export function SwipeCard({
             userVote={voted}
             visible
             onClose={onCloseResult}
+            onNext={onNext}
+          />
+        )}
+
+        {enableGesture && (
+          <motion.div
+            className="swipe-card__gesture-layer"
+            drag={dragAxis}
+            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+            dragElastic={0.06}
+            dragMomentum={false}
+            onDrag={handleDrag}
+            onDragEnd={handleDragEnd}
           />
         )}
       </motion.div>

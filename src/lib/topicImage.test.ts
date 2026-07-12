@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_TOPIC_IMAGE, normalizeTopicImageUrl } from './topicImage';
+import { DEFAULT_TOPIC_IMAGE, buildUnsplashUrl, normalizeTopicImageUrl } from './topicImage';
+
+describe('buildUnsplashUrl', () => {
+  it('includes standard params', () => {
+    const url = buildUnsplashUrl('photo-123');
+    expect(url).toContain('auto=format');
+    expect(url).toContain('w=600');
+  });
+});
 
 describe('normalizeTopicImageUrl', () => {
   it('returns default for empty url', () => {
@@ -7,10 +15,17 @@ describe('normalizeTopicImageUrl', () => {
   });
 
   it('replaces known broken unsplash ids', () => {
-    const url = normalizeTopicImageUrl(
-      'https://images.unsplash.com/photo-1511923499332-2d1a0b9c5b8e?w=600&h=800&fit=crop',
-    );
-    expect(url).toContain('photo-1554118811-1e0d58224f24');
+    const broken = [
+      'photo-1511923499332-2d1a0b9c5b8e',
+      'photo-1522869635100-9f4ffb5f86f7',
+      'photo-1476514525535-07fb3c4ac5d1',
+    ];
+
+    for (const id of broken) {
+      const url = normalizeTopicImageUrl(`https://images.unsplash.com/${id}?w=600&h=800&fit=crop`);
+      expect(url).not.toContain(id);
+      expect(url).toContain('auto=format');
+    }
   });
 
   it('adds auto format params for unsplash', () => {

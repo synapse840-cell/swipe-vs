@@ -11,6 +11,7 @@ interface CommentSheetProps {
   comments: Comment[];
   userVote: VoteSide;
   commentLikes: Record<string, boolean>;
+  adjustLikeCount?: boolean;
   onClose: () => void;
   onSubmit: (text: string) => void;
   onToggleCommentLike: (commentId: string) => void;
@@ -30,6 +31,7 @@ export function CommentSheet({
   comments,
   userVote,
   commentLikes,
+  adjustLikeCount = false,
   onClose,
   onSubmit,
   onToggleCommentLike,
@@ -44,7 +46,8 @@ export function CommentSheet({
 
   function getLikeState(comment: Comment) {
     const liked = commentLikes[comment.id] ?? false;
-    return { liked, count: comment.likes + (liked ? 1 : 0) };
+    const count = adjustLikeCount && liked ? comment.likes + 1 : comment.likes;
+    return { liked, count };
   }
 
   function handleSubmit(e: React.FormEvent) {

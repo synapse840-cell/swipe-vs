@@ -95,18 +95,28 @@ body {
 /* ── Category Filter ── */
 
 .category-filter {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  padding: 0 16px 10px;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
   z-index: 10;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 
 .category-filter::-webkit-scrollbar {
   display: none;
+}
+
+.category-filter__track {
+  display: inline-flex;
+  gap: 8px;
+  min-width: 100%;
+  width: max-content;
+  padding: 0 16px 10px;
+  margin: 0 auto;
+  justify-content: center;
 }
 
 .category-filter__chip {

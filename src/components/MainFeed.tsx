@@ -706,21 +706,11 @@ export function MainFeed() {
           comments={commentSheetComments}
           userVote={commentSheetVote}
           commentLikes={commentLikes}
+          adjustLikeCount={!useSupabase}
           onClose={handleCommentClose}
           onSubmit={handleCommentSubmit}
           onToggleCommentLike={(commentId) => {
-            void (async () => {
-              const wasLiked = Boolean(commentLikes[commentId]);
-              await toggleCommentLike(commentId);
-              if (useSupabase && commentSheetTopic) {
-                const nextComments = commentSheetTopic.comments.map((comment) =>
-                  comment.id === commentId
-                    ? { ...comment, likes: Math.max(0, comment.likes + (wasLiked ? -1 : 1)) }
-                    : comment,
-                );
-                patchTopic(commentSheetTopic.id, { comments: nextComments });
-              }
-            })();
+            void toggleCommentLike(commentId);
           }}
           onDeleteComment={handleCommentDelete}
         />

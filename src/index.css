@@ -1983,6 +1983,56 @@ body {
   margin-top: 8px;
 }
 
+.legal-section--operator {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.legal-operator {
+  display: grid;
+  gap: 10px;
+}
+
+.legal-operator div {
+  display: grid;
+  gap: 2px;
+}
+
+.legal-operator dt {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.legal-operator dd {
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.legal-contact {
+  display: grid;
+  gap: 10px;
+}
+
+.legal-contact__link {
+  color: var(--color-b);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.legal-contact__pending {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.legal-contact__meta {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
 .legal-page__footer,
 .my-drawer__legal {
   display: flex;

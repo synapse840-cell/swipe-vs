@@ -168,7 +168,10 @@ export function SwipeCard({
               <button
                 type="button"
                 className="swipe-card__reopen-result"
-                onClick={onReopenResult}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onReopenResult();
+                }}
               >
                 結果に戻る
               </button>
@@ -176,8 +179,9 @@ export function SwipeCard({
           </div>
         </div>
 
-        <div className="swipe-card__choices">
-          <div className="swipe-card__choice swipe-card__choice--a">
+        <div className="swipe-card__choices-area">
+          <div className="swipe-card__choices">
+            <div className="swipe-card__choice swipe-card__choice--a">
             <img src={topic.optionA.imageUrl} alt={topic.optionA.text} />
             <div className="swipe-card__choice-label swipe-card__choice-label--a">
               <span className="swipe-card__choice-badge swipe-card__choice-badge--a">A</span>
@@ -208,13 +212,26 @@ export function SwipeCard({
           </div>
         </div>
 
-        {!showResult && !voted && (
-          <p className="swipe-card__skip-hint">↑ スワイプでスキップ</p>
-        )}
+          {!showResult && !voted && (
+            <p className="swipe-card__skip-hint">↑ スワイプでスキップ</p>
+          )}
 
-        {isReviewMode && (
-          <p className="swipe-card__skip-hint">↑ スワイプで次へ</p>
-        )}
+          {isReviewMode && (
+            <p className="swipe-card__skip-hint">↑ スワイプで次へ</p>
+          )}
+
+          {canDrag && !showResult && (
+            <motion.div
+              className="swipe-card__gesture-layer"
+              drag={canDrag ? (showResult || voted ? 'y' : true) : false}
+              dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+              dragElastic={0.06}
+              dragMomentum={false}
+              onDrag={handleDrag}
+              onDragEnd={handleDragEnd}
+            />
+          )}
+        </div>
 
         {resultVisible && voted && (
           <VoteResult
@@ -226,18 +243,6 @@ export function SwipeCard({
           />
         )}
       </motion.div>
-
-      {canDrag && !showResult && (
-        <motion.div
-          className="swipe-card__gesture-layer"
-          drag={canDrag ? (showResult || voted ? 'y' : true) : false}
-          dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-          dragElastic={0.06}
-          dragMomentum={false}
-          onDrag={handleDrag}
-          onDragEnd={handleDragEnd}
-        />
-      )}
     </div>
   );
 }

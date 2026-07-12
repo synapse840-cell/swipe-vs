@@ -29,7 +29,7 @@ export function mapTopicRow(row: TopicRow, comments: Comment[]): Topic {
     votesA: row.votes_a,
     votesB: row.votes_b,
     viewCount: row.view_count,
-    likeCount: 'likes_count' in row ? (row as TopicRow & { likes_count?: number }).likes_count ?? 0 : 0,
+    likeCount: row.likes_count ?? 0,
     isPublished: row.is_published,
     createdBy: row.created_by,
     comments,

@@ -39,6 +39,7 @@ export interface Database {
           votes_a: number;
           votes_b: number;
           view_count: number;
+          likes_count: number;
           created_by: string;
           is_published: boolean;
           created_at: string;
@@ -54,6 +55,7 @@ export interface Database {
           votes_a?: number;
           votes_b?: number;
           view_count?: number;
+          likes_count?: number;
           created_by: string;
           is_published?: boolean;
           created_at?: string;
@@ -69,6 +71,7 @@ export interface Database {
           votes_a?: number;
           votes_b?: number;
           view_count?: number;
+          likes_count?: number;
           created_by?: string;
           is_published?: boolean;
           created_at?: string;

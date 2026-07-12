@@ -250,10 +250,18 @@ export function MainFeed() {
   const showNotFound = Boolean(missingTopicId);
   const hasNoTopicsAtAll = allTopics.length === 0;
 
-  const openTopic = useCallback((topicId: string, options?: { showResultIfVoted?: boolean }) => {
+  const openTopic = useCallback((
+    topicId: string,
+    options?: { showResultIfVoted?: boolean; ifMissing?: 'not-found' | 'feed' },
+  ) => {
     const topic = findTopicById(allTopics, topicId);
     if (!topic) {
-      setMissingTopicId(topicId);
+      if (options?.ifMissing !== 'feed') {
+        setMissingTopicId(topicId);
+      } else {
+        setMissingTopicId(null);
+        setCurrentIndex(0);
+      }
       setPinnedTopicId(null);
       setResultTopicId(null);
       setCommentOpen(false);
@@ -280,15 +288,19 @@ export function MainFeed() {
 
   useEffect(() => {
     if (hasInitializedFeed) return;
+    if (useSupabase && supabaseTopics.loading) return;
 
-    const topicId = getTopicIdFromUrl() ?? feedState?.topicId;
+    const topicId = getTopicIdFromUrl();
     if (topicId) {
-      openTopic(topicId, { showResultIfVoted: true });
+      openTopic(topicId, { showResultIfVoted: true, ifMissing: 'feed' });
+    } else {
+      clearTopicUrl();
+      setMissingTopicId(null);
     }
 
     setFeedReady(true);
     setHasInitializedFeed(true);
-  }, [hasInitializedFeed, feedState?.topicId, openTopic]);
+  }, [hasInitializedFeed, openTopic, useSupabase, supabaseTopics.loading]);
 
   useEffect(() => {
     if (!feedReady) return;
@@ -346,7 +358,7 @@ export function MainFeed() {
         return;
       }
 
-      openTopic(topicId, { showResultIfVoted: true });
+      openTopic(topicId, { showResultIfVoted: true, ifMissing: 'feed' });
     };
 
     window.addEventListener('popstate', onPopState);
@@ -384,8 +396,6 @@ export function MainFeed() {
   const handleReopenResult = useCallback(() => {
     if (!currentTopic) return;
     if (!votes[currentTopic.id]) return;
-
-    setPinnedTopicId(currentTopic.id);
     setResultTopicId(currentTopic.id);
   }, [currentTopic, votes]);
 
@@ -602,14 +612,15 @@ export function MainFeed() {
 
     void (async () => {
       const wasLiked = Boolean(likes[currentTopic.id]);
+      const baseCount = useSupabase
+        ? currentTopic.likeCount ?? 0
+        : localSession.topicLikeAdjustments[currentTopic.id] ?? 0;
       await toggleLike(currentTopic.id);
-      if (useSupabase) {
-        patchTopic(currentTopic.id, {
-          likeCount: Math.max(0, (currentTopic.likeCount ?? 0) + (wasLiked ? -1 : 1)),
-        });
-      }
+      patchTopic(currentTopic.id, {
+        likeCount: Math.max(0, baseCount + (wasLiked ? -1 : 1)),
+      });
     })();
-  }, [currentTopic, likes, toggleLike, useSupabase, patchTopic]);
+  }, [currentTopic, likes, toggleLike, useSupabase, patchTopic, localSession]);
 
   if (useSupabase && !supabaseSession.ready) {
     return <AppLoading message="Supabase に接続中..." />;

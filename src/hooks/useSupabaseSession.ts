@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   addCommentRemote,
   deleteCommentRemote,
@@ -21,10 +21,9 @@ import type { VoteSide } from '../types';
 
 interface UseSupabaseSessionOptions {
   enabled: boolean;
-  onTopicsChanged?: () => Promise<void> | void;
 }
 
-export function useSupabaseSession({ enabled, onTopicsChanged }: UseSupabaseSessionOptions) {
+export function useSupabaseSession({ enabled }: UseSupabaseSessionOptions) {
   const [ready, setReady] = useState(!enabled);
   const [initError, setInitError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -34,6 +33,17 @@ export function useSupabaseSession({ enabled, onTopicsChanged }: UseSupabaseSess
   const [seenTopicIds, setSeenTopicIds] = useState<string[]>(() => loadUserData().seenTopicIds);
   const [feedState, setFeedState] = useState<FeedState | null>(() => loadUserData().feedState);
   const [myPageState, setMyPageState] = useState<MyPageState>(() => loadUserData().myPageState);
+
+  const votesRef = useRef(votes);
+  votesRef.current = votes;
+
+  const localSnapshotRef = useRef<UserLocalData>(loadUserData());
+  localSnapshotRef.current = {
+    ...localSnapshotRef.current,
+    seenTopicIds,
+    feedState,
+    myPageState,
+  };
 
   useEffect(() => {
     if (!enabled) return;
@@ -68,19 +78,20 @@ export function useSupabaseSession({ enabled, onTopicsChanged }: UseSupabaseSess
   }, [enabled]);
 
   const persistLocal = useCallback((patch: Partial<UserLocalData>) => {
-    const current = loadUserData();
-    saveUserData({ ...current, ...patch });
+    const next = { ...localSnapshotRef.current, ...patch };
+    saveUserData(next);
+    localSnapshotRef.current = next;
   }, []);
 
   const recordVote = useCallback(async (topicId: string, side: VoteSide): Promise<boolean> => {
-    if (!userId || votes[topicId]) return false;
+    if (!userId || votesRef.current[topicId]) return false;
 
     const recorded = await recordVoteRemote(topicId, userId, side);
     if (!recorded) return false;
 
     setVotes((prev) => ({ ...prev, [topicId]: side }));
     return true;
-  }, [userId, votes]);
+  }, [userId]);
 
   const recordView = useCallback(async (topicId: string) => {
     if (!userId) return;
@@ -118,14 +129,37 @@ export function useSupabaseSession({ enabled, onTopicsChanged }: UseSupabaseSess
     }
   }, [userId]);
 
-  const toggleCommentLike = useCallback(async (commentId: string) => {
-    if (!userId) return;
+  const toggleCommentLike = useCallback(async (commentId: string): Promise<boolean | null> => {
+    if (!userId) return null;
 
-    const wasLiked = Boolean(commentLikes[commentId]);
-    await toggleCommentLikeRemote(commentId, userId, wasLiked);
-    setCommentLikes((prev) => ({ ...prev, [commentId]: !wasLiked }));
-    await onTopicsChanged?.();
-  }, [userId, commentLikes, onTopicsChanged]);
+    let wasLiked = false;
+    setCommentLikes((prev) => {
+      wasLiked = Boolean(prev[commentId]);
+      const next = { ...prev };
+      if (wasLiked) {
+        delete next[commentId];
+      } else {
+        next[commentId] = true;
+      }
+      return next;
+    });
+
+    try {
+      await toggleCommentLikeRemote(commentId, userId, wasLiked);
+      return wasLiked;
+    } catch (err) {
+      setCommentLikes((prev) => {
+        const next = { ...prev };
+        if (wasLiked) {
+          next[commentId] = true;
+        } else {
+          delete next[commentId];
+        }
+        return next;
+      });
+      throw err;
+    }
+  }, [userId]);
 
   const addComment = useCallback(async (topicId: string, text: string, side: VoteSide) => {
     if (!userId) return null;

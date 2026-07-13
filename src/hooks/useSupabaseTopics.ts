@@ -22,6 +22,12 @@ interface RefreshOptions {
   silent?: boolean;
 }
 
+type TopicPatch = Partial<Topic> | ((topic: Topic) => Topic);
+
+function applyTopicPatch(topic: Topic, patch: TopicPatch): Topic {
+  return typeof patch === 'function' ? patch(topic) : { ...topic, ...patch };
+}
+
 export function useSupabaseTopics(userId: string | null, enabled: boolean) {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [hasMore, setHasMore] = useState(true);
@@ -123,19 +129,19 @@ export function useSupabaseTopics(userId: string | null, enabled: boolean) {
     void refreshTopics();
   }, [refreshTopics]);
 
-  const patchTopic = useCallback((topicId: string, patch: Partial<Topic>) => {
+  const patchTopic = useCallback((topicId: string, patch: TopicPatch) => {
     setTopics((prev) =>
-      prev.map((topic) => (topic.id === topicId ? { ...topic, ...patch } : topic)),
+      prev.map((topic) => (topic.id === topicId ? applyTopicPatch(topic, patch) : topic)),
     );
     setMyPageTopics((prev) => {
       if (!prev) return prev;
       const patchList = (list: Topic[]) =>
-        list.map((topic) => (topic.id === topicId ? { ...topic, ...patch } : topic));
+        list.map((topic) => (topic.id === topicId ? applyTopicPatch(topic, patch) : topic));
       return {
         created: patchList(prev.created),
         voted: prev.voted.map((item) =>
           item.topic.id === topicId
-            ? { ...item, topic: { ...item.topic, ...patch } }
+            ? { ...item, topic: applyTopicPatch(item.topic, patch) }
             : item,
         ),
         liked: patchList(prev.liked),

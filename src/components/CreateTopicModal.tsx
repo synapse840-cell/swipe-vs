@@ -6,7 +6,9 @@ interface CreateTopicModalProps {
   open: boolean;
   userId: string;
   onClose: () => void;
-  onSubmit: (topic: Omit<Topic, 'id' | 'votesA' | 'votesB' | 'viewCount' | 'comments'>) => void;
+  onSubmit: (
+    topic: Omit<Topic, 'id' | 'votesA' | 'votesB' | 'viewCount' | 'comments'>,
+  ) => void | Promise<void>;
   uploadImage?: (file: File, side: 'a' | 'b') => Promise<string>;
 }
 
@@ -127,13 +129,13 @@ export function CreateTopicModal({
         resolveImageUrl('b', fileB, previewB, DEFAULT_IMAGE_B),
       ]);
 
-      onSubmit({
+      await Promise.resolve(onSubmit({
         title: title.trim(),
         category,
         optionA: { text: textA.trim(), imageUrl: imageUrlA },
         optionB: { text: textB.trim(), imageUrl: imageUrlB },
         createdBy: userId,
-      });
+      }));
 
       resetForm();
       onClose();

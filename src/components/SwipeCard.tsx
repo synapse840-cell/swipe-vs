@@ -41,6 +41,8 @@ export function SwipeCard({
   const [isAnimating, setIsAnimating] = useState(false);
   const [dragX, setDragX] = useState(0);
   const isCommittingRef = useRef(false);
+  const topicIdRef = useRef(topic.id);
+  const mountedRef = useRef(true);
 
   const exitX = useMotionValue(0);
   const exitY = useMotionValue(0);
@@ -49,11 +51,17 @@ export function SwipeCard({
   const stampThreshold = getStampThresholdPx();
 
   useEffect(() => {
+    topicIdRef.current = topic.id;
+    mountedRef.current = true;
     exitX.set(0);
     exitY.set(0);
     setDragX(0);
     setIsAnimating(false);
     isCommittingRef.current = false;
+
+    return () => {
+      mountedRef.current = false;
+    };
   }, [topic.id, exitX, exitY]);
 
   useEffect(() => {
@@ -91,13 +99,16 @@ export function SwipeCard({
     setIsAnimating(true);
 
     const targetX = side === 'A' ? -window.innerWidth * 1.1 : window.innerWidth * 1.1;
+    const votedTopicId = topicIdRef.current;
 
     await animate(exitX, targetX, {
       duration: 0.28,
       ease: [0.4, 0, 0.2, 1],
     });
 
-    onVote(side);
+    if (mountedRef.current && topicIdRef.current === votedTopicId) {
+      onVote(side);
+    }
   }
 
   async function snapBack() {

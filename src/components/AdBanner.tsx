@@ -3,17 +3,18 @@ import { isAdSenseConfigured, resolveAdSenseUnit } from '../lib/adConfig';
 import { mountAdSenseUnit } from '../lib/loadAdSense';
 
 interface AdBannerProps {
-  onDismiss: () => void;
+  active?: boolean;
+  onDismiss?: () => void;
 }
 
 const MOBILE_MEDIA_QUERY = '(max-width: 768px)';
 
-export function AdBanner({ onDismiss }: AdBannerProps) {
+export function AdBanner({ active = true, onDismiss }: AdBannerProps) {
   const adSlotRef = useRef<HTMLDivElement>(null);
   const useLiveAd = isAdSenseConfigured();
 
   useEffect(() => {
-    if (!useLiveAd) return;
+    if (!active || !useLiveAd) return;
 
     const container = adSlotRef.current;
     if (!container) return;
@@ -23,7 +24,7 @@ export function AdBanner({ onDismiss }: AdBannerProps) {
     if (!unit) return;
 
     return mountAdSenseUnit(container, unit);
-  }, [useLiveAd]);
+  }, [active, useLiveAd]);
 
   return (
     <aside className="ad-banner" aria-label="広告">
@@ -38,9 +39,11 @@ export function AdBanner({ onDismiss }: AdBannerProps) {
           </p>
         </div>
       )}
-      <button type="button" className="ad-banner__next" onClick={onDismiss}>
-        次へ
-      </button>
+      {onDismiss ? (
+        <button type="button" className="ad-banner__next" onClick={onDismiss}>
+          次へ
+        </button>
+      ) : null}
     </aside>
   );
 }

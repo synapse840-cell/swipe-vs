@@ -10,8 +10,6 @@ export interface TopicVoteAdjustment {
 
 export interface FeedState {
   topicId: string;
-  scrollCount: number;
-  nextAdAt: number;
   categoryFilter: string;
 }
 

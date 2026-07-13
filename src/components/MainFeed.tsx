@@ -24,16 +24,8 @@ import { ActionBar } from './ActionBar';
 import { CommentSheet } from './CommentSheet';
 import { CreateTopicModal } from './CreateTopicModal';
 import { MyPageDrawer } from './MyPageDrawer';
-import { AdBanner } from './AdBanner';
 import { CategoryFilterBar } from './CategoryFilterBar';
 import { FeedEmptyState } from './FeedEmptyState';
-
-const AD_INTERVAL_MIN = 3;
-const AD_INTERVAL_MAX = 4;
-
-function randomAdInterval() {
-  return AD_INTERVAL_MIN + Math.floor(Math.random() * (AD_INTERVAL_MAX - AD_INTERVAL_MIN + 1));
-}
 
 function findTopicById(topics: Topic[], topicId: string) {
   return topics.find((topic) => topic.id === topicId) ?? null;
@@ -163,9 +155,6 @@ export function MainFeed() {
   );
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [scrollCount, setScrollCount] = useState(feedState?.scrollCount ?? 0);
-  const [nextAdAt, setNextAdAt] = useState(feedState?.nextAdAt ?? randomAdInterval);
-  const [showAd, setShowAd] = useState(false);
   const [feedReady, setFeedReady] = useState(false);
   const [hasInitializedFeed, setHasInitializedFeed] = useState(false);
   const [pinnedTopicId, setPinnedTopicId] = useState<string | null>(null);
@@ -178,10 +167,7 @@ export function MainFeed() {
   const [resultTopicId, setResultTopicId] = useState<string | null>(null);
   const [shareToast, setShareToast] = useState(false);
 
-  const nextAdAtRef = useRef(nextAdAt);
   const viewedTopicIdsRef = useRef<Set<string>>(new Set());
-
-  nextAdAtRef.current = nextAdAt;
 
   const pinnedTopic = pinnedTopicId ? findTopicById(allTopics, pinnedTopicId) : null;
 
@@ -335,11 +321,9 @@ export function MainFeed() {
 
     saveFeedState({
       topicId: currentTopic.id,
-      scrollCount,
-      nextAdAt,
       categoryFilter,
     });
-  }, [currentTopic?.id, scrollCount, nextAdAt, categoryFilter, feedReady, saveFeedState]);
+  }, [currentTopic?.id, categoryFilter, feedReady, saveFeedState]);
 
   useEffect(() => {
     if (!feedReady || !currentTopic) return;
@@ -408,22 +392,6 @@ export function MainFeed() {
       return;
     }
 
-    let shouldShowAd = false;
-    setScrollCount((prev) => {
-      const next = prev + 1;
-      if (next >= nextAdAtRef.current) {
-        shouldShowAd = true;
-        return 0;
-      }
-      return next;
-    });
-
-    if (shouldShowAd) {
-      setShowAd(true);
-      setNextAdAt(randomAdInterval());
-      return;
-    }
-
     if (feedTopics.length > 0) {
       setCurrentIndex((i) => i + 1);
     }
@@ -446,14 +414,6 @@ export function MainFeed() {
     setCommentOpen(false);
     clearTopicUrl();
   }, []);
-
-  const handleAdClose = useCallback(() => {
-    setShowAd(false);
-    setResultTopicId(null);
-    if (feedTopics.length > 0) {
-      setCurrentIndex((i) => i + 1);
-    }
-  }, [feedTopics.length]);
 
   const handleCommentOpen = useCallback(() => {
     if (!currentTopic || !currentVote) return;
@@ -521,8 +481,6 @@ export function MainFeed() {
       setMissingTopicId(null);
       setPinnedTopicId(newTopic.id);
       setCurrentIndex(0);
-      setScrollCount(0);
-      setNextAdAt(randomAdInterval());
       setResultTopicId(null);
       viewedTopicIdsRef.current.delete(newTopic.id);
       syncTopicUrl(newTopic.id);
@@ -656,7 +614,7 @@ export function MainFeed() {
 
       <CategoryFilterBar value={categoryFilter} onChange={handleCategoryChange} />
 
-      <main className={`feed ${showAd ? 'feed--with-ad' : ''}`}>
+      <main className="feed">
         {showNotFound ? (
           <FeedEmptyState
             categoryFilter={categoryFilter}
@@ -672,21 +630,18 @@ export function MainFeed() {
             onCreateTopic={() => setCreateOpen(true)}
           />
         ) : currentTopic && (
-          <>
-            <SwipeCard
-              key={currentTopic.id}
-              topic={currentTopic}
-              voted={currentVote}
-              showResult={showResult}
-              isUnread={isUnread}
-              onVote={(side) => handleVote(currentTopic.id, side)}
-              onNext={handleNext}
-              onCloseResult={handleCloseResult}
-              onReopenResult={handleReopenResult}
-              isActive={!showAd}
-            />
-            {showAd && <AdBanner onDismiss={handleAdClose} />}
-          </>
+          <SwipeCard
+            key={currentTopic.id}
+            topic={currentTopic}
+            voted={currentVote}
+            showResult={showResult}
+            isUnread={isUnread}
+            onVote={(side) => handleVote(currentTopic.id, side)}
+            onNext={handleNext}
+            onCloseResult={handleCloseResult}
+            onReopenResult={handleReopenResult}
+            isActive
+          />
         )}
       </main>
 

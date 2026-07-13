@@ -1,6 +1,7 @@
 import { motion, type PanInfo } from 'framer-motion';
 import type { VoteSide } from '../types';
 import { checkVerticalSkip } from '../utils/swipeGesture';
+import { AdBanner } from './AdBanner';
 
 interface VoteResultProps {
   votesA: number;
@@ -59,6 +60,8 @@ export function VoteResult({
         >
           ×
         </button>
+
+        <AdBanner active={visible} />
 
         <div className="vote-result__percentages">
           <div className="vote-result__pct-block vote-result__pct-block--a">

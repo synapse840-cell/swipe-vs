@@ -1,0 +1,15 @@
+{
+  "name": "Swipe VS",
+  "short_name": "Swipe VS",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "theme_color": "#0088FF",
+  "background_color": "#0088FF",
+  "display": "standalone"
+}

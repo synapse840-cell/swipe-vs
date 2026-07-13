@@ -52,12 +52,12 @@ async function shareTopic(topic: Topic, onCopied?: () => void) {
 
 export function MainFeed() {
   const useSupabase = isSupabaseConfigured();
-  const refreshTopicsRef = useRef<() => Promise<void>>(async () => {});
+  const refreshTopicsRef = useRef<(options?: { silent?: boolean }) => Promise<void>>(async () => {});
 
   const localSession = useAnonymousSession();
   const supabaseSession = useSupabaseSession({
     enabled: useSupabase,
-    onTopicsChanged: () => refreshTopicsRef.current(),
+    onTopicsChanged: () => refreshTopicsRef.current({ silent: true }),
   });
   const supabaseTopics = useSupabaseTopics(
     useSupabase && supabaseSession.ready ? supabaseSession.userId : null,
@@ -114,7 +114,15 @@ export function MainFeed() {
       }
     : localSession;
 
-  const { patchTopic, removeTopic, prependTopic } = supabaseTopics;
+  const {
+    patchTopic,
+    removeTopic,
+    prependTopic,
+    loadMoreTopics,
+    loadMyPageTopics,
+    ensureTopicLoaded,
+    myPageTopics,
+  } = supabaseTopics;
 
   const [categoryFilter, setCategoryFilter] = useState(
     feedState?.categoryFilter ?? ALL_CATEGORIES_FILTER,
@@ -168,6 +176,8 @@ export function MainFeed() {
   const [shareToast, setShareToast] = useState(false);
 
   const viewedTopicIdsRef = useRef<Set<string>>(new Set());
+  const activeTopicIdRef = useRef<string | null>(feedState?.topicId ?? null);
+  const hasRestoredFeedPositionRef = useRef(false);
 
   const pinnedTopic = pinnedTopicId ? findTopicById(allTopics, pinnedTopicId) : null;
 
@@ -201,26 +211,31 @@ export function MainFeed() {
     return [...commentSheetTopic.comments, ...extra];
   }, [commentSheetTopic, extraComments]);
 
-  const myTopics = useMemo(
-    () => allTopics.filter((t) => t.createdBy === userId),
-    [allTopics, userId],
-  );
+  const myTopics = useMemo(() => {
+    if (useSupabase && myPageTopics) {
+      return myPageTopics.created;
+    }
+    return allTopics.filter((t) => t.createdBy === userId);
+  }, [useSupabase, myPageTopics, allTopics, userId]);
 
-  const votedTopics = useMemo(
-    () =>
-      Object.entries(votes)
-        .map(([topicId, side]) => {
-          const topic = allTopics.find((t) => t.id === topicId);
-          return topic ? { topic, side } : null;
-        })
-        .filter((item): item is { topic: Topic; side: VoteSide } => item !== null),
-    [votes, allTopics],
-  );
+  const votedTopics = useMemo(() => {
+    if (useSupabase && myPageTopics) {
+      return myPageTopics.voted;
+    }
+    return Object.entries(votes)
+      .map(([topicId, side]) => {
+        const topic = allTopics.find((t) => t.id === topicId);
+        return topic ? { topic, side } : null;
+      })
+      .filter((item): item is { topic: Topic; side: VoteSide } => item !== null);
+  }, [useSupabase, myPageTopics, votes, allTopics]);
 
-  const likedTopics = useMemo(
-    () => allTopics.filter((topic) => likes[topic.id]),
-    [allTopics, likes],
-  );
+  const likedTopics = useMemo(() => {
+    if (useSupabase && myPageTopics) {
+      return myPageTopics.liked;
+    }
+    return allTopics.filter((topic) => likes[topic.id]);
+  }, [useSupabase, myPageTopics, allTopics, likes]);
 
   const myPageNotifications = useMemo(
     () => buildMyPageNotifications(
@@ -236,11 +251,15 @@ export function MainFeed() {
   const showNotFound = Boolean(missingTopicId);
   const hasNoTopicsAtAll = allTopics.length === 0;
 
-  const openTopic = useCallback((
+  const openTopic = useCallback(async (
     topicId: string,
     options?: { showResultIfVoted?: boolean; ifMissing?: 'not-found' | 'feed' },
   ) => {
-    const topic = findTopicById(allTopics, topicId);
+    let topic = findTopicById(allTopics, topicId);
+    if (!topic && useSupabase) {
+      topic = await ensureTopicLoaded(topicId);
+    }
+
     if (!topic) {
       if (options?.ifMissing !== 'feed') {
         setMissingTopicId(topicId);
@@ -257,6 +276,7 @@ export function MainFeed() {
 
     setMissingTopicId(null);
     setPinnedTopicId(topicId);
+    activeTopicIdRef.current = topicId;
     setResultTopicId(
       options?.showResultIfVoted && votes[topicId] ? topicId : null,
     );
@@ -270,34 +290,56 @@ export function MainFeed() {
     }
 
     return true;
-  }, [allTopics, feedTopics, votes]);
+  }, [allTopics, feedTopics, votes, useSupabase, ensureTopicLoaded]);
 
   useEffect(() => {
     if (hasInitializedFeed) return;
     if (useSupabase && supabaseTopics.loading) return;
 
-    const topicId = getTopicIdFromUrl();
-    if (topicId) {
-      openTopic(topicId, { showResultIfVoted: true, ifMissing: 'feed' });
-    } else {
-      clearTopicUrl();
-      setMissingTopicId(null);
-    }
+    void (async () => {
+      const topicId = getTopicIdFromUrl();
+      if (topicId) {
+        await openTopic(topicId, { showResultIfVoted: true, ifMissing: 'feed' });
+      } else {
+        clearTopicUrl();
+        setMissingTopicId(null);
+      }
 
-    setFeedReady(true);
-    setHasInitializedFeed(true);
+      setFeedReady(true);
+      setHasInitializedFeed(true);
+    })();
   }, [hasInitializedFeed, openTopic, useSupabase, supabaseTopics.loading]);
+
+  useEffect(() => {
+    if (!feedReady || pinnedTopicId || hasRestoredFeedPositionRef.current) return;
+    if (!feedState?.topicId) return;
+
+    const nextIndex = feedTopics.findIndex((topic) => topic.id === feedState.topicId);
+    if (nextIndex >= 0) {
+      activeTopicIdRef.current = feedState.topicId;
+      setCurrentIndex(nextIndex);
+    }
+    hasRestoredFeedPositionRef.current = true;
+  }, [feedReady, feedState?.topicId, feedTopics, pinnedTopicId]);
+
+  useEffect(() => {
+    if (currentTopic?.id) {
+      activeTopicIdRef.current = currentTopic.id;
+    }
+  }, [currentTopic?.id]);
 
   useEffect(() => {
     if (!feedReady) return;
     if (pinnedTopicId) return;
 
+    const activeId = activeTopicIdRef.current;
+    if (!activeId) return;
+
     setCurrentIndex((prev) => {
       if (feedTopics.length === 0) return 0;
-      const topicId = feedTopics[prev % feedTopics.length]?.id;
-      if (!topicId) return 0;
-      const nextIndex = feedTopics.findIndex((topic) => topic.id === topicId);
-      return nextIndex >= 0 ? nextIndex : 0;
+      const nextIndex = feedTopics.findIndex((topic) => topic.id === activeId);
+      if (nextIndex >= 0) return nextIndex;
+      return Math.min(prev, feedTopics.length - 1);
     });
   }, [feedTopics, feedReady, pinnedTopicId]);
 
@@ -305,16 +347,18 @@ export function MainFeed() {
     if (!feedReady || !currentTopic) return;
     if (viewedTopicIdsRef.current.has(currentTopic.id)) return;
 
-    viewedTopicIdsRef.current.add(currentTopic.id);
+    const topicId = currentTopic.id;
+    const baseViewCount = currentTopic.viewCount;
+    viewedTopicIdsRef.current.add(topicId);
 
     void (async () => {
-      await recordView(currentTopic.id);
+      await recordView(topicId);
       if (useSupabase) {
-        patchTopic(currentTopic.id, { viewCount: currentTopic.viewCount + 1 });
+        patchTopic(topicId, { viewCount: baseViewCount + 1 });
       }
-      markTopicSeen(currentTopic.id);
+      markTopicSeen(topicId);
     })();
-  }, [currentTopic?.id, feedReady, recordView, markTopicSeen, useSupabase, patchTopic, currentTopic?.viewCount]);
+  }, [currentTopic?.id, feedReady, recordView, markTopicSeen, useSupabase, patchTopic]);
 
   useEffect(() => {
     if (!feedReady || !currentTopic) return;
@@ -393,9 +437,15 @@ export function MainFeed() {
     }
 
     if (feedTopics.length > 0) {
-      setCurrentIndex((i) => i + 1);
+      setCurrentIndex((index) => {
+        const nextIndex = index + 1;
+        if (useSupabase && nextIndex >= feedTopics.length - 2) {
+          void loadMoreTopics();
+        }
+        return nextIndex;
+      });
     }
-  }, [pinnedTopicId, feedTopics.length]);
+  }, [pinnedTopicId, feedTopics.length, useSupabase, loadMoreTopics]);
 
   useEffect(() => {
     if (!pinnedTopicId) return;
@@ -430,8 +480,13 @@ export function MainFeed() {
 
     void (async () => {
       if (useSupabase) {
-        await supabaseSession.addComment(commentTopicId, text, commentSheetVote);
-        await supabaseTopics.refreshTopics();
+        const comment = await supabaseSession.addComment(commentTopicId, text, commentSheetVote);
+        if (comment) {
+          const topic = findTopicById(allTopics, commentTopicId);
+          if (topic) {
+            patchTopic(commentTopicId, { comments: [...topic.comments, comment] });
+          }
+        }
         return;
       }
 
@@ -444,7 +499,7 @@ export function MainFeed() {
         likes: 0,
       });
     })();
-  }, [commentTopicId, commentSheetVote, useSupabase, supabaseSession, supabaseTopics, localSession]);
+  }, [commentTopicId, commentSheetVote, useSupabase, supabaseSession, localSession, allTopics, patchTopic]);
 
   const handleCommentDelete = useCallback((commentId: string) => {
     if (!commentTopicId) return;
@@ -452,10 +507,16 @@ export function MainFeed() {
     void (async () => {
       await deleteComment(commentTopicId, commentId);
       if (useSupabase) {
-        await supabaseTopics.refreshTopics();
+        const topic = findTopicById(allTopics, commentTopicId);
+        if (topic) {
+          patchTopic(commentTopicId, {
+            comments: topic.comments.filter((comment) => comment.id !== commentId),
+          });
+        }
+        return;
       }
     })();
-  }, [deleteComment, commentTopicId, useSupabase, supabaseTopics]);
+  }, [deleteComment, commentTopicId, useSupabase, allTopics, patchTopic]);
 
   const handleCreateTopic = useCallback((
     data: Omit<Topic, 'id' | 'votesA' | 'votesB' | 'viewCount' | 'comments'>,
@@ -490,7 +551,7 @@ export function MainFeed() {
   const handleTopicSelect = useCallback((topicId: string) => {
     setDrawerOpen(false);
     markMyPageOpened(myTopics);
-    openTopic(topicId, { showResultIfVoted: true });
+    void openTopic(topicId, { showResultIfVoted: true });
   }, [markMyPageOpened, myTopics, openTopic]);
 
   const handleUnpublishTopic = useCallback((topicId: string) => {
@@ -498,9 +559,14 @@ export function MainFeed() {
     if (!confirmed) return;
 
     void (async () => {
-      await unpublishTopic(topicId, userId);
-      if (useSupabase) {
-        removeTopic(topicId);
+      try {
+        await unpublishTopic(topicId, userId);
+        if (useSupabase) {
+          removeTopic(topicId);
+        }
+      } catch (err) {
+        window.alert(err instanceof Error ? err.message : 'お題の非公開に失敗しました');
+        return;
       }
 
       viewedTopicIdsRef.current.delete(topicId);
@@ -536,8 +602,11 @@ export function MainFeed() {
   }, [markMyPageOpened, myTopics]);
 
   const handleDrawerOpen = useCallback(() => {
+    if (useSupabase) {
+      void loadMyPageTopics();
+    }
     setDrawerOpen(true);
-  }, []);
+  }, [useSupabase, loadMyPageTopics]);
 
   const handleCreateFromDrawer = useCallback(() => {
     setDrawerOpen(false);
@@ -584,7 +653,7 @@ export function MainFeed() {
     return <AppLoading message="Supabase に接続中..." />;
   }
 
-  if (useSupabase && supabaseTopics.loading) {
+  if (useSupabase && supabaseTopics.loading && supabaseTopics.topics.length === 0) {
     return <AppLoading message="お題を読み込み中..." />;
   }
 

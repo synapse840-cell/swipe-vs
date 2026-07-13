@@ -5,6 +5,8 @@ import { mapCommentRow, mapTopicRow, topicToInsertRow } from './topicMappers';
 
 type TopicRow = Database['public']['Tables']['topics']['Row'];
 
+export const FEED_PAGE_SIZE = 10;
+
 async function fetchProfiles(userIds: string[]): Promise<Record<string, string>> {
   if (userIds.length === 0) return {};
 
@@ -47,21 +49,126 @@ async function fetchCommentsForTopics(
   return grouped;
 }
 
-export async function fetchTopics(userId: string): Promise<Topic[]> {
+async function mapTopicRows(
+  rows: TopicRow[],
+  userId: string,
+): Promise<Topic[]> {
+  const topicIds = rows.map((row) => row.id);
+  const commentsByTopic = await fetchCommentsForTopics(topicIds, userId);
+  return rows.map((row) => mapTopicRow(row, commentsByTopic[row.id] ?? []));
+}
+
+/** フィード用: 公開中のお題のみページング取得 */
+export async function fetchFeedTopics(
+  userId: string,
+  offset = 0,
+  limit = FEED_PAGE_SIZE,
+): Promise<Topic[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('topics')
     .select('*')
-    .or(`is_published.eq.true,created_by.eq.${userId}`)
+    .eq('is_published', true)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw error;
+  return mapTopicRows((data ?? []) as TopicRow[], userId);
+}
+
+/** マイページ用: 自分が作成した公開中のお題 */
+export async function fetchMyCreatedTopics(userId: string): Promise<Topic[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from('topics')
+    .select('*')
+    .eq('created_by', userId)
+    .eq('is_published', true)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
+  return mapTopicRows((data ?? []) as TopicRow[], userId);
+}
 
-  const rows = (data ?? []) as TopicRow[];
-  const topicIds = rows.map((row) => row.id);
-  const commentsByTopic = await fetchCommentsForTopics(topicIds, userId);
+/** マイページ用: いいねしたお題 */
+export async function fetchLikedTopics(userId: string): Promise<Topic[]> {
+  const supabase = getSupabase();
+  const { data: likes, error: likesError } = await supabase
+    .from('topic_likes')
+    .select('topic_id')
+    .eq('user_id', userId);
 
-  return rows.map((row) => mapTopicRow(row, commentsByTopic[row.id] ?? []));
+  if (likesError) throw likesError;
+
+  const topicIds = [...new Set((likes ?? []).map((row) => row.topic_id))];
+  if (topicIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('topics')
+    .select('*')
+    .in('id', topicIds)
+    .eq('is_published', true)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return mapTopicRows((data ?? []) as TopicRow[], userId);
+}
+
+/** マイページ用: 投票したお題 */
+export async function fetchVotedTopicsWithSide(
+  userId: string,
+): Promise<{ topic: Topic; side: VoteSide }[]> {
+  const supabase = getSupabase();
+  const { data: voteRows, error: votesError } = await supabase
+    .from('votes')
+    .select('topic_id, side')
+    .eq('user_id', userId);
+
+  if (votesError) throw votesError;
+  if (!voteRows?.length) return [];
+
+  const topicIds = voteRows.map((row) => row.topic_id);
+  const { data, error } = await supabase
+    .from('topics')
+    .select('*')
+    .in('id', topicIds)
+    .eq('is_published', true);
+
+  if (error) throw error;
+
+  const topics = await mapTopicRows((data ?? []) as TopicRow[], userId);
+  const topicMap = new Map(topics.map((topic) => [topic.id, topic]));
+
+  return voteRows
+    .map((row) => {
+      const topic = topicMap.get(row.topic_id);
+      return topic ? { topic, side: row.side as VoteSide } : null;
+    })
+    .filter((item): item is { topic: Topic; side: VoteSide } => item !== null);
+}
+
+/** 共有URLなどで単一お題を取得 */
+export async function fetchTopicById(topicId: string, userId: string): Promise<Topic | null> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from('topics')
+    .select('*')
+    .eq('id', topicId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  const row = data as TopicRow;
+  if (!row.is_published && row.created_by !== userId) return null;
+
+  const [topic] = await mapTopicRows([row], userId);
+  return topic ?? null;
+}
+
+/** @deprecated fetchFeedTopics を使用 */
+export async function fetchTopics(userId: string): Promise<Topic[]> {
+  return fetchFeedTopics(userId, 0, FEED_PAGE_SIZE);
 }
 
 export async function createTopic(
@@ -180,24 +287,32 @@ export async function deleteCommentRemote(
   userId: string,
 ): Promise<void> {
   const supabase = getSupabase();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('comments')
     .delete()
     .eq('id', commentId)
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .select('id');
 
   if (error) throw error;
+  if (!data?.length) {
+    throw new Error('コメントの削除に失敗しました。再度ログインしてお試しください。');
+  }
 }
 
 export async function unpublishTopicRemote(topicId: string, userId: string): Promise<void> {
   const supabase = getSupabase();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('topics')
     .update({ is_published: false })
     .eq('id', topicId)
-    .eq('created_by', userId);
+    .eq('created_by', userId)
+    .select('id');
 
   if (error) throw error;
+  if (!data?.length) {
+    throw new Error('お題の非公開に失敗しました。再度ログインしてお試しください。');
+  }
 }
 
 export async function loadUserSessionData(userId: string): Promise<{

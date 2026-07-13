@@ -106,10 +106,8 @@ export function useSupabaseSession({ enabled, onTopicsChanged }: UseSupabaseSess
 
   const addComment = useCallback(async (topicId: string, text: string, side: VoteSide) => {
     if (!userId) return null;
-    const comment = await addCommentRemote(topicId, userId, side, text);
-    await onTopicsChanged?.();
-    return comment;
-  }, [userId, onTopicsChanged]);
+    return addCommentRemote(topicId, userId, side, text);
+  }, [userId]);
 
   const deleteComment = useCallback(async (topicId: string, commentId: string) => {
     if (!userId) return;
@@ -120,15 +118,13 @@ export function useSupabaseSession({ enabled, onTopicsChanged }: UseSupabaseSess
       delete next[commentId];
       return next;
     });
-    await onTopicsChanged?.();
     void topicId;
-  }, [userId, onTopicsChanged]);
+  }, [userId]);
 
   const unpublishTopic = useCallback(async (topicId: string, ownerId: string) => {
     if (!userId || userId !== ownerId) return;
     await unpublishTopicRemote(topicId, userId);
-    await onTopicsChanged?.();
-  }, [userId, onTopicsChanged]);
+  }, [userId]);
 
   const markTopicSeen = useCallback((topicId: string) => {
     setSeenTopicIds((prev) => {

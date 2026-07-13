@@ -24,7 +24,7 @@ import { ActionBar } from './ActionBar';
 import { CommentSheet } from './CommentSheet';
 import { CreateTopicModal } from './CreateTopicModal';
 import { MyPageDrawer } from './MyPageDrawer';
-import { AdOverlay } from './AdOverlay';
+import { AdBanner } from './AdBanner';
 import { CategoryFilterBar } from './CategoryFilterBar';
 import { FeedEmptyState } from './FeedEmptyState';
 
@@ -656,7 +656,7 @@ export function MainFeed() {
 
       <CategoryFilterBar value={categoryFilter} onChange={handleCategoryChange} />
 
-      <main className="feed">
+      <main className={`feed ${showAd ? 'feed--with-ad' : ''}`}>
         {showNotFound ? (
           <FeedEmptyState
             categoryFilter={categoryFilter}
@@ -672,18 +672,21 @@ export function MainFeed() {
             onCreateTopic={() => setCreateOpen(true)}
           />
         ) : currentTopic && (
-          <SwipeCard
-            key={currentTopic.id}
-            topic={currentTopic}
-            voted={currentVote}
-            showResult={showResult}
-            isUnread={isUnread}
-            onVote={(side) => handleVote(currentTopic.id, side)}
-            onNext={handleNext}
-            onCloseResult={handleCloseResult}
-            onReopenResult={handleReopenResult}
-            isActive={!showAd}
-          />
+          <>
+            <SwipeCard
+              key={currentTopic.id}
+              topic={currentTopic}
+              voted={currentVote}
+              showResult={showResult}
+              isUnread={isUnread}
+              onVote={(side) => handleVote(currentTopic.id, side)}
+              onNext={handleNext}
+              onCloseResult={handleCloseResult}
+              onReopenResult={handleReopenResult}
+              isActive={!showAd}
+            />
+            {showAd && <AdBanner onDismiss={handleAdClose} />}
+          </>
         )}
       </main>
 
@@ -739,7 +742,6 @@ export function MainFeed() {
         onUnpublishTopic={handleUnpublishTopic}
       />
 
-      <AdOverlay open={showAd} onClose={handleAdClose} />
 
       {shareToast && (
         <div className="share-toast" role="status">

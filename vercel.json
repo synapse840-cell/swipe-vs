@@ -3,6 +3,7 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
+    { "source": "/ads.txt", "destination": "/ads.txt" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

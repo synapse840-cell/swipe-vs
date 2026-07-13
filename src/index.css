@@ -151,6 +151,10 @@ body {
   padding: 0 12px 12px;
 }
 
+.feed--with-ad .swipe-card {
+  bottom: calc(188px + var(--safe-bottom));
+}
+
 .feed-empty {
   display: flex;
   flex-direction: column;
@@ -1783,97 +1787,85 @@ body {
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-/* ── Ad Overlay ── */
+/* ── In-feed Ad Banner ── */
 
-.ad-overlay {
-  position: fixed;
-  inset: 0;
-  background: #000;
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: fade-in 0.3s ease;
-  pointer-events: auto;
-  touch-action: none;
-}
-
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.ad-overlay__content {
-  text-align: center;
-  padding: 32px;
-}
-
-.ad-overlay__label {
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.ad-overlay__mock {
-  margin: 32px 0;
-  padding: 48px 32px;
-  background: linear-gradient(135deg, #1a1a2e, #2a1a3e);
+.ad-banner {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 20;
+  padding: 12px 14px calc(12px + var(--safe-bottom));
   border-radius: var(--radius);
   border: 1px solid var(--border);
+  background: rgba(14, 14, 22, 0.98);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
 }
 
-.ad-overlay__slot {
-  min-height: 250px;
+.ad-banner__label {
+  margin: 0 0 8px;
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ad-banner__mock {
+  margin-bottom: 10px;
+  padding: 16px 12px;
+  border-radius: calc(var(--radius) - 4px);
+  border: 1px dashed var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  text-align: center;
+}
+
+.ad-banner__slot {
+  min-height: 90px;
   width: 100%;
-  max-width: 336px;
-  margin: 32px auto;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: calc(var(--radius) - 4px);
+  background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border);
 }
 
-.ad-overlay__slot iframe,
-.ad-overlay__slot img {
+.ad-banner__slot iframe,
+.ad-banner__slot img {
   max-width: 100%;
 }
 
-.ad-overlay__mock p {
-  font-size: 1.3rem;
-  font-weight: 900;
+.ad-banner__mock p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  font-weight: 700;
 }
 
-.ad-overlay__sub {
-  font-size: 0.9rem !important;
-  color: var(--text-secondary);
-  margin-top: 8px;
+.ad-banner__sub {
+  margin-top: 6px !important;
+  font-size: 0.72rem !important;
+  color: var(--text-secondary) !important;
+  line-height: 1.5;
   font-weight: 400 !important;
 }
 
-.ad-overlay__skip {
-  background: rgba(255, 255, 255, 0.1);
+.ad-banner__next {
+  width: 100%;
+  padding: 10px 14px;
   border: 1px solid var(--border);
-  color: var(--text-secondary);
-  padding: 12px 32px;
-  border-radius: 24px;
-  font-size: 0.9rem;
-  cursor: not-allowed;
-  opacity: 0.6;
-  transition: background 0.2s, opacity 0.2s, color 0.2s;
-}
-
-.ad-overlay__skip--ready {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 700;
   cursor: pointer;
-  opacity: 1;
 }
 
-.ad-overlay__skip--ready:hover {
-  background: rgba(255, 255, 255, 0.2);
+.ad-banner__next:active {
+  background: rgba(255, 255, 255, 0.14);
 }
 
 /* ── Desktop centering ── */

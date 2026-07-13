@@ -103,7 +103,12 @@ export function useAnonymousSession() {
     const current = snapshotRef.current;
     const wasLiked = Boolean(current.likes[topicId]);
     const nextLiked = !wasLiked;
-    const nextLikes = { ...current.likes, [topicId]: nextLiked };
+    const nextLikes = { ...current.likes };
+    if (nextLiked) {
+      nextLikes[topicId] = true;
+    } else {
+      delete nextLikes[topicId];
+    }
     const currentLikeCount = current.topicLikeAdjustments[topicId] ?? 0;
     const nextLikeAdjustments = {
       ...current.topicLikeAdjustments,

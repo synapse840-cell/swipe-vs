@@ -90,10 +90,33 @@ export function useSupabaseSession({ enabled, onTopicsChanged }: UseSupabaseSess
   const toggleLike = useCallback(async (topicId: string) => {
     if (!userId) return;
 
-    const wasLiked = Boolean(likes[topicId]);
-    await toggleTopicLikeRemote(topicId, userId, wasLiked);
-    setLikes((prev) => ({ ...prev, [topicId]: !wasLiked }));
-  }, [userId, likes]);
+    let wasLiked = false;
+    setLikes((prev) => {
+      wasLiked = Boolean(prev[topicId]);
+      const next = { ...prev };
+      if (wasLiked) {
+        delete next[topicId];
+      } else {
+        next[topicId] = true;
+      }
+      return next;
+    });
+
+    try {
+      await toggleTopicLikeRemote(topicId, userId, wasLiked);
+    } catch (err) {
+      setLikes((prev) => {
+        const next = { ...prev };
+        if (wasLiked) {
+          next[topicId] = true;
+        } else {
+          delete next[topicId];
+        }
+        return next;
+      });
+      throw err;
+    }
+  }, [userId]);
 
   const toggleCommentLike = useCallback(async (commentId: string) => {
     if (!userId) return;

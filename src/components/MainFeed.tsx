@@ -189,6 +189,7 @@ export function MainFeed() {
 
   const currentVote = currentTopic ? votes[currentTopic.id] ?? null : null;
   const showResult = currentTopic ? resultTopicId === currentTopic.id : false;
+  const isCurrentTopicLiked = currentTopic ? Boolean(likes[currentTopic.id]) : false;
   const currentLikeCount = currentTopic
     ? (useSupabase
       ? currentTopic.likeCount ?? 0
@@ -323,12 +324,6 @@ export function MainFeed() {
   }, [feedReady, feedState?.topicId, feedTopics, pinnedTopicId]);
 
   useEffect(() => {
-    if (currentTopic?.id) {
-      activeTopicIdRef.current = currentTopic.id;
-    }
-  }, [currentTopic?.id]);
-
-  useEffect(() => {
     if (!feedReady) return;
     if (pinnedTopicId) return;
 
@@ -348,6 +343,7 @@ export function MainFeed() {
     if (viewedTopicIdsRef.current.has(currentTopic.id)) return;
 
     const topicId = currentTopic.id;
+    activeTopicIdRef.current = topicId;
     const baseViewCount = currentTopic.viewCount;
     viewedTopicIdsRef.current.add(topicId);
 
@@ -439,13 +435,17 @@ export function MainFeed() {
     if (feedTopics.length > 0) {
       setCurrentIndex((index) => {
         const nextIndex = index + 1;
+        const nextTopic = feedTopics[nextIndex % feedTopics.length];
+        if (nextTopic) {
+          activeTopicIdRef.current = nextTopic.id;
+        }
         if (useSupabase && nextIndex >= feedTopics.length - 2) {
           void loadMoreTopics();
         }
         return nextIndex;
       });
     }
-  }, [pinnedTopicId, feedTopics.length, useSupabase, loadMoreTopics]);
+  }, [pinnedTopicId, feedTopics, useSupabase, loadMoreTopics]);
 
   useEffect(() => {
     if (!pinnedTopicId) return;
@@ -459,6 +459,7 @@ export function MainFeed() {
     setCategoryFilter(category);
     setPinnedTopicId(null);
     setMissingTopicId(null);
+    activeTopicIdRef.current = null;
     setCurrentIndex(0);
     setResultTopicId(null);
     setCommentOpen(false);
@@ -637,17 +638,26 @@ export function MainFeed() {
   const handleLikeToggle = useCallback(() => {
     if (!currentTopic) return;
 
+    const topicId = currentTopic.id;
+    const wasLiked = Boolean(likes[topicId]);
+    const topic = findTopicById(allTopics, topicId);
+    const baseCount = useSupabase
+      ? topic?.likeCount ?? 0
+      : localSession.topicLikeAdjustments[topicId] ?? 0;
+
     void (async () => {
-      const wasLiked = Boolean(likes[currentTopic.id]);
-      const baseCount = useSupabase
-        ? currentTopic.likeCount ?? 0
-        : localSession.topicLikeAdjustments[currentTopic.id] ?? 0;
-      await toggleLike(currentTopic.id);
-      patchTopic(currentTopic.id, {
-        likeCount: Math.max(0, baseCount + (wasLiked ? -1 : 1)),
-      });
+      try {
+        await toggleLike(topicId);
+        if (useSupabase) {
+          patchTopic(topicId, {
+            likeCount: Math.max(0, baseCount + (wasLiked ? -1 : 1)),
+          });
+        }
+      } catch {
+        // toggleLike rolls back likes state on failure
+      }
     })();
-  }, [currentTopic, likes, toggleLike, useSupabase, patchTopic, localSession]);
+  }, [currentTopic, likes, toggleLike, useSupabase, patchTopic, allTopics, localSession]);
 
   if (useSupabase && !supabaseSession.ready) {
     return <AppLoading message="Supabase に接続中..." />;
@@ -716,7 +726,8 @@ export function MainFeed() {
 
       {currentTopic && (
         <ActionBar
-          liked={!!likes[currentTopic.id]}
+          key={currentTopic.id}
+          liked={isCurrentTopicLiked}
           likeCount={currentLikeCount}
           voted={!!currentVote}
           commentCount={allComments.length}
